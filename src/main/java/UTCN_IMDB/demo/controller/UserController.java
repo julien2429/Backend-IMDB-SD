@@ -1,7 +1,10 @@
 package UTCN_IMDB.demo.controller;
 
+import UTCN_IMDB.demo.config.CompileTimeException;
+import UTCN_IMDB.demo.DTO.UserDTO;
 import UTCN_IMDB.demo.model.User;
 import UTCN_IMDB.demo.service.UserService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,13 +39,13 @@ public class UserController {
     }
 
     @PostMapping("/user")
-    public User addUser(@RequestBody User person) {
-        return userService.addUser(person);
+    public User addUser(@Valid @RequestBody UserDTO userDTO) throws CompileTimeException {
+        return userService.addUser(userDTO);
     }
 
     @PutMapping("/user/{uuid}")
-    public User updateUser(@PathVariable UUID uuid, @RequestBody User person) {
-        return userService.updateUser(uuid, person);
+    public User updateUser(@PathVariable UUID uuid, @Valid @RequestBody UserDTO userDTO) throws CompileTimeException {
+        return userService.updateUser(uuid, userDTO);
     }
 
     @DeleteMapping("/user/{uuid}")
