@@ -44,7 +44,7 @@ public class UserService {
     public User updateUser(UUID uuid, UserDTO userDTO) throws CompileTimeException {
         User existingUser =
                 userRepository.findById(uuid).orElseThrow(
-                        () -> new IllegalStateException("User with uuid " + uuid + " not found"));
+                        () -> new CompileTimeException("User with uuid " + uuid + " not found"));
 
         ///validations
 
@@ -69,19 +69,19 @@ public class UserService {
         userRepository.deleteById(uuid);
     }
 
-    public User getUserByEmail(String email) {
+    public User getUserByEmail(String email) throws CompileTimeException {
         return userRepository.findByEmail(email).orElseThrow(
-                () -> new IllegalStateException("User with email " + email + " not found"));
+                () -> new CompileTimeException("User with email " + email + " not found"));
     }
 
-    public User getUserById(UUID uuid) {
+    public User getUserById(UUID uuid) throws CompileTimeException {
         return userRepository.findById(uuid).orElseThrow(
-                () -> new IllegalStateException("User with id " + uuid + " not found"));
+                () -> new CompileTimeException("User with id " + uuid + " not found"));
     }
 
-    public User getUserByLogin(String email, String password)
+    public User getUserByLogin(String email, String password) throws CompileTimeException
     {
         return userRepository.findByEmailAndPassword(email,password).orElseThrow(
-                () -> new IllegalStateException("User login failed"));
+                () -> new CompileTimeException("User login failed"));
     }
 }

@@ -24,17 +24,17 @@ public class UserController {
     }
 
     @GetMapping("/user/{uuid}")
-    public User getUserById(@PathVariable UUID uuid) {
+    public User getUserById(@PathVariable UUID uuid) throws CompileTimeException {
         return userService.getUserById(uuid);
     }
 
     @GetMapping("/user/email/{email}")
-    public User getUserByEmail(@PathVariable String email) {
+    public User getUserByEmail(@PathVariable String email) throws CompileTimeException {
         return userService.getUserByEmail(email);
     }
 
     @GetMapping("/user/login/{email}/{password}")
-    public User getUserByLogin(@PathVariable String email, @PathVariable String password) {
+    public User getUserByLogin(@PathVariable String email, @PathVariable String password) throws CompileTimeException {
         return userService.getUserByLogin(email, password);
     }
 
