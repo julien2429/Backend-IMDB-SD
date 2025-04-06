@@ -1,15 +1,21 @@
 package UTCN_IMDB.demo.controller;
 
+import UTCN_IMDB.demo.DTO.ReviewDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
 import UTCN_IMDB.demo.DTO.UserDTO;
+import UTCN_IMDB.demo.model.LoginRequest;
+import UTCN_IMDB.demo.model.LoginResponse;
 import UTCN_IMDB.demo.model.User;
 import UTCN_IMDB.demo.service.UserService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 
 @RestController
@@ -17,6 +23,7 @@ import java.util.UUID;
 @CrossOrigin
 public class UserController {
     private final UserService userService;
+
 
     @GetMapping("/user")
     public List<User> getUsers() {
@@ -33,20 +40,53 @@ public class UserController {
         return userService.getUserByEmail(email);
     }
 
-    @GetMapping("/user/login/{email}/{password}")
-    public User getUserByLogin(@PathVariable String email, @PathVariable String password) throws CompileTimeException {
-        return userService.getUserByLogin(email, password);
-    }
-
     @PostMapping("/user")
     public User addUser(@Valid @RequestBody UserDTO userDTO) throws CompileTimeException {
         return userService.addUser(userDTO);
     }
 
+    @PostMapping("/user/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) throws CompileTimeException {
+        LoginResponse loginResponse = userService.login(loginRequest.username(), loginRequest.password());
+        if(loginResponse.success()) {
+            return ResponseEntity.ok(loginResponse);
+        } else {
+            return ResponseEntity.status(UNAUTHORIZED.value()).body(loginResponse);
+        }
+    }
+
+    @PostMapping("/user/addReview/{uuid}")
+    public User addReview(@PathVariable UUID uuid, @Valid @RequestBody ReviewDTO reviewDTO) throws CompileTimeException {
+        return userService.addReview(uuid, reviewDTO);
+    }
+
+    @PostMapping("/user/createList/{uuid}/{listName}")
+    public User createList(@PathVariable UUID uuid, @PathVariable String listName) throws CompileTimeException {
+        return userService.createList(uuid, listName);
+    }
+
+    @PostMapping("/user/deleteList/{uuid}/{listId}")
+    public User deleteList(@PathVariable UUID uuid, @PathVariable UUID listId) throws CompileTimeException {
+        return userService.deleteList(uuid, listId);
+    }
+
+    @PostMapping("/user/addMovieToList/{uuid}/{listId}/{movieId}")
+    public User addMovieToList(@PathVariable UUID uuid, @PathVariable UUID listId, @PathVariable UUID movieId) throws CompileTimeException {
+        return userService.addMovieToList(uuid, listId, movieId);
+    }
+
+    @PostMapping("/user/removeMovieFromList/{uuid}/{listId}/{movieId}")
+    public User removeMovieFromList(@PathVariable UUID uuid, @PathVariable UUID listId, @PathVariable UUID movieId) throws CompileTimeException {
+        return userService.removeMovieFromList(uuid, listId, movieId);
+    }
+
+
+
     @PutMapping("/user/{uuid}")
     public User updateUser(@PathVariable UUID uuid, @Valid @RequestBody UserDTO userDTO) throws CompileTimeException {
         return userService.updateUser(uuid, userDTO);
     }
+
 
     @DeleteMapping("/user/{uuid}")
     public void deleteUser(@PathVariable UUID uuid) {

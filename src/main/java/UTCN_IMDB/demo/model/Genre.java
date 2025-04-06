@@ -2,6 +2,7 @@ package UTCN_IMDB.demo.model;
 
 import UTCN_IMDB.demo.enums.UserRole;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.mapping.Set;
@@ -21,8 +22,7 @@ public class Genre {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @ManyToMany(mappedBy = "genres")
-    @JsonBackReference
-    private List<Movie> movies;
-
+    @OneToMany(mappedBy = "genre", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference(value = "genre-movieGenres")
+    private List<MovieGenre> movieGenres;
 }

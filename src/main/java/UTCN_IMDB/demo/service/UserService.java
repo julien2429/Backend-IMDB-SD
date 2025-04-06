@@ -1,12 +1,21 @@
 package UTCN_IMDB.demo.service;
 
+import UTCN_IMDB.demo.DTO.ReviewDTO;
+import UTCN_IMDB.demo.config.BCryptHashing;
 import UTCN_IMDB.demo.config.CompileTimeException;
 import UTCN_IMDB.demo.DTO.UserDTO;
-import UTCN_IMDB.demo.model.User;
+import UTCN_IMDB.demo.model.*;
+import UTCN_IMDB.demo.repository.ListsRepository;
+import UTCN_IMDB.demo.repository.MovieRepository;
+import UTCN_IMDB.demo.repository.ReviewRepository;
 import UTCN_IMDB.demo.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.swing.plaf.PanelUI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,30 +23,55 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final MovieRepository movieRepository;
+    private final ListsRepository listsRepository;
+    private final ReviewRepository reviewRepository;
 
+    @Transactional
     public List<User> getUsers() {
         return userRepository.findAll();
     }
 
 
-    public User addUser(UserDTO userDTO) throws CompileTimeException  {
+    @Transactional
+    public User addUser(UserDTO userDTO) throws CompileTimeException {
         User user = new User();
 
         ///validations
-        if(userRepository.findByEmail(userDTO.getEmail()).isPresent())
-        {
+        if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
             throw new CompileTimeException("Email already taken");
         }
 
-        if(userRepository.findByUsername(userDTO.getUsername()).isPresent())
-        {
+        if (userRepository.findByUsername(userDTO.getUsername()).isPresent()) {
             throw new CompileTimeException("Username already taken");
         }
 
         user.setEmail(userDTO.getEmail());
         user.setRole(userDTO.getRole());
         user.setUsername(userDTO.getUsername());
-        user.setPassword(userDTO.getPassword());
+
+        List<Review> reviews = new ArrayList<>();
+        user.setReviews(reviews);
+
+        List<Lists> lists = new ArrayList<>();
+
+        Lists Favorites = new Lists();
+        Favorites.setListName("Favorites");
+        Favorites.setMovieList(new ArrayList<>());
+        Favorites.setUser(user); // Set the User for Favorites
+        lists.add(Favorites);
+
+        Lists Watchlist = new Lists();
+        Watchlist.setMovieList(new ArrayList<>());
+        Watchlist.setListName("Watchlist");
+        Watchlist.setUser(user); // Set the User for Watchlist
+        lists.add(Watchlist);
+
+        user.setLists(lists);
+
+        String hashedPassword = BCryptHashing.hashPassword(userDTO.getPassword());
+        user.setPassword(hashedPassword);
+
         return userRepository.save(user);
     }
 
@@ -48,21 +82,141 @@ public class UserService {
 
         ///validations
 
-        if(userRepository.findByEmail(userDTO.getEmail()).isPresent() && !userRepository.findByEmail(userDTO.getEmail()).get().getUserId().equals(uuid))
-        {
+        if (userRepository.findByEmail(userDTO.getEmail()).isPresent() && !userRepository.findByEmail(userDTO.getEmail()).get().getUserId().equals(uuid)) {
             throw new CompileTimeException("Email already taken");
         }
 
-        if(userRepository.findByUsername(userDTO.getUsername()).isPresent() && !userRepository.findByUsername(userDTO.getUsername()).get().getUserId().equals(uuid))
-        {
+        if (userRepository.findByUsername(userDTO.getUsername()).isPresent() && !userRepository.findByUsername(userDTO.getUsername()).get().getUserId().equals(uuid)) {
             throw new CompileTimeException("Username already taken");
         }
 
         existingUser.setEmail(userDTO.getEmail());
         existingUser.setRole(userDTO.getRole());
         existingUser.setUsername(userDTO.getUsername());
-        existingUser.setPassword(userDTO.getPassword());
+
+        String hashedPassword = BCryptHashing.hashPassword(userDTO.getPassword());
+        existingUser.setPassword(hashedPassword);
         return userRepository.save(existingUser);
+    }
+
+    @Transactional
+    public User addReview(UUID uuid, ReviewDTO reviewDTO) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        Movie movie = movieRepository.findById(reviewDTO.getMovieId()).orElseThrow(
+                () -> new CompileTimeException("Movie with id " + reviewDTO.getMovieId() + " not found"));
+
+
+        Review review = movie.getReviews().stream()
+                .filter(r -> r.getUser().getUserId().equals(user.getUserId()))
+                .findFirst()
+                .orElse(null);
+
+        if (review != null) {
+            review.setComment(reviewDTO.getReviewText());
+            review.setRating(reviewDTO.getRating());
+            reviewRepository.save(review);
+        } else {
+            Review newReview = new Review();
+            newReview.setComment(reviewDTO.getReviewText());
+            newReview.setRating(reviewDTO.getRating());
+            newReview.setUser(user);
+            newReview.setMovie(movie);
+            movie.getReviews().add(newReview);
+            user.getReviews().add(newReview);
+            reviewRepository.save(newReview);
+
+        }
+
+
+        return userRepository.save(user);
+    }
+
+
+    public User createList(UUID uuid, String listName) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        if (user.getLists().stream().anyMatch(list -> list.getListName().equals(listName))) {
+            throw new CompileTimeException("List with name " + listName + " already exists");
+        }
+
+        Lists newList = new Lists();
+        newList.setListName(listName);
+
+        if(user.getLists() == null) {
+            user.setLists(new ArrayList<>());
+        }
+
+        List<Lists> lists = user.getLists();
+        lists.add(newList);
+        newList.setUser(user);
+        newList.setMovieList(new ArrayList<>());
+        user.setLists(lists);
+
+        return userRepository.save(user);
+    }
+
+    public User deleteList(UUID uuid, UUID listId) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        Lists list = user.getLists().stream()
+                .filter(l -> l.getListId().equals(listId))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("List with id " + listId + " not found"));
+
+        user.getLists().remove(list);
+        return userRepository.save(user);
+    }
+
+
+
+    public User addMovieToList(UUID uuid, UUID listId, UUID movieId) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        Lists list = user.getLists().stream()
+                .filter(l -> l.getListId().equals(listId))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("List with id " + listId + " not found"));
+
+        Movie movie = movieRepository.findById(movieId).orElseThrow(
+                () -> new CompileTimeException("Movie with id " + movieId + " not found"));
+
+        MovieList movieList = new MovieList();
+        movieList.setMovie(movie);
+        movieList.setList(list);
+
+        if (list.getMovieList() == null) {
+            list.setMovieList(new ArrayList<>());
+        }
+        List<MovieList> movieLists = list.getMovieList();
+        movieLists.add(movieList);
+        movieList.setList(list);
+        return userRepository.save(user);
+    }
+
+    public User removeMovieFromList(UUID uuid, UUID listId, UUID movieId) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        Lists list = user.getLists().stream()
+                .filter(l -> l.getListId().equals(listId))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("List with id " + listId + " not found"));
+
+        Movie movie = movieRepository.findById(movieId).orElseThrow(
+                () -> new CompileTimeException("Movie with id " + movieId + " not found"));
+
+        MovieList movieList = list.getMovieList().stream()
+                .filter(ml -> ml.getMovie().getMovieId().equals(movie.getMovieId()))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("Movie with id " + movieId + " not found in list"));
+
+        list.getMovieList().remove(movieList);
+        return userRepository.save(user);
     }
 
     public void deleteUser(UUID uuid) {
@@ -79,9 +233,29 @@ public class UserService {
                 () -> new CompileTimeException("User with id " + uuid + " not found"));
     }
 
-    public User getUserByLogin(String email, String password) throws CompileTimeException
-    {
-        return userRepository.findByEmailAndPassword(email,password).orElseThrow(
-                () -> new CompileTimeException("User login failed"));
+    public LoginResponse login(String username, String password) throws CompileTimeException {
+        String hashedPassword = BCryptHashing.hashPassword(password);
+
+        User user = userRepository.findByUsername(username).orElseThrow(
+                () -> new CompileTimeException("User with username " + username + " not found"));
+
+        if (BCryptHashing.checkPassword(password, user.getPassword())) {
+            return new LoginResponse(
+                    true,
+                    user.getRole(),
+                    "Login successful",
+                    null
+            );
+        } else {
+            return new LoginResponse(
+                    false,
+                    null,
+                    "Invalid password",
+                    null
+            );
+        }
+
+
     }
+
 }

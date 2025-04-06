@@ -1,0 +1,18 @@
+[
+  {
+    "userId": null,
+    "email": "admin@admin.com",
+    "username": "admin",
+    "password": "$2a$10$2SdxLqsf8MQ99RxXgTUFUOlxeYPLm6773UGxr9BCATdSAjNQVc4pG",
+    "role": "ADMIN",
+    "imageUrl": null
+  },
+  {
+    "userId": null,
+    "email": "user@user.com",
+    "username": "user",
+    "password": "$2a$10$9uUa9SjBkva5qfsCKoE poOhiLs.NIU0ak/IQSOEgzYxDf8Huc5y3y",
+    "role": "UNKNOWN",
+    "imageUrl": null
+  }
+]

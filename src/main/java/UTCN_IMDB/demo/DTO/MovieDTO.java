@@ -5,11 +5,33 @@ import lombok.Data;
 
 import java.util.Date;
 
-@Data
 public class MovieDTO
 {
-    @Size(min = 2, max = 64, message = "Title should be between 3 and 64 characters")
     private String title;
-    private Date year;
+    private Date releaseYear;
 
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public Date getReleaseYear() {
+        return releaseYear;
+    }
+
+    public void setReleaseYear(Date releaseYear) {
+        this.releaseYear = releaseYear;
+    }
+
+    public MovieDTO() {
+    }
+
+    public MovieDTO(String updatedMatrix, Date releaseYear) {
+        this.title = updatedMatrix;
+        this.releaseYear = releaseYear;
+    }
 }

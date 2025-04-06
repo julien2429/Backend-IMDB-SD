@@ -14,13 +14,17 @@ import UTCN_IMDB.demo.repository.RoleRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @AllArgsConstructor
 public class PersonService {
+
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     private final PersonRepository personRepository;
     private final MovieRepository movieRepository;
@@ -42,7 +46,18 @@ public class PersonService {
     }
 
     public Person getPersonByBirthDate(String birthDate) throws CompileTimeException{
-        return personRepository.findByBirthDate(LocalDate.parse(birthDate)).orElseThrow(
+        dateFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        Date localDate;
+        try {
+            localDate = dateFormat.parse(birthDate);
+        }
+        catch (Exception e) {
+            throw new CompileTimeException("Invalid date format. Expected format: yyyy-MM-dd");
+        }
+
+
+
+        return personRepository.findByBirthDate(localDate).orElseThrow(
                 () -> new CompileTimeException("Person with birthDate " + birthDate + " not found"));
     }
 

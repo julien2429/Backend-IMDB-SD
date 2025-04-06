@@ -1,5 +1,7 @@
 package UTCN_IMDB.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,7 +19,7 @@ public class Role {
     @Column(name = "roleName", nullable = false)
     private String roleName;
 
-
+    @JsonManagedReference(value = "role-movieCasts") // Added the value
     @OneToMany(mappedBy = "role")
     private List<MovieCast> movieCastsList;
 

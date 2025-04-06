@@ -1,9 +1,12 @@
 package UTCN_IMDB.demo.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,11 +27,15 @@ public class Person {
     @Column(name = "nationality", nullable = true)
     private String nationality;
     @Column(name = "birthDate", nullable = true)
-    private LocalDate birthDate;
+    private Date birthDate;
     @Column(name = "deathDate", nullable = true)
-    private LocalDate deathDate;
+    private Date deathDate;
 
+    @JsonManagedReference(value = "person-movieCasts") // Added the value
     @OneToMany(mappedBy = "person")
     private List<MovieCast> movieCastList;
+
+    @Column(name = "imageUrl", nullable = true)
+    private String imageUrl;
 
 }

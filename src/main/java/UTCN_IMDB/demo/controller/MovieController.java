@@ -2,19 +2,15 @@ package UTCN_IMDB.demo.controller;
 
 
 import UTCN_IMDB.demo.DTO.MovieDTO;
-import UTCN_IMDB.demo.DTO.RoleDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
-import UTCN_IMDB.demo.model.Movie;
-import UTCN_IMDB.demo.model.Person;
-import UTCN_IMDB.demo.model.Role;
+import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.service.MovieService;
-import jakarta.persistence.Tuple;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -37,8 +33,13 @@ public class MovieController {
     }
 
     @GetMapping("/movie/{uuid}")
-    public Movie getMovieById(@PathVariable UUID uuid) {
+    public Movie getMovieById(@PathVariable UUID uuid) throws CompileTimeException {
         return movieService.getMovieById(uuid);
+    }
+
+    @GetMapping("/movie/details/{uuid}")
+    public MovieDetails getMovieDetails(@PathVariable UUID uuid) throws CompileTimeException {
+        return movieService.getMovieDetails(uuid);
     }
 
     @PostMapping("/movie")
@@ -46,12 +47,12 @@ public class MovieController {
         return movieService.addMovie(movieDTO);
     }
 
-    @PutMapping("/movie/{uuid}")
-    public Movie updateMovie(@RequestBody @Valid MovieDTO movieDTO, @PathVariable UUID uuid) {
+    @PostMapping("/movie/{uuid}")
+    public Movie updateMovie(@PathVariable UUID uuid, @RequestBody @Valid MovieDTO movieDTO) throws CompileTimeException {
         return movieService.updateMovie(uuid, movieDTO);
     }
 
-    @PutMapping("/movie/addGenre/{movieUUID}")
+    @PostMapping("/movie/addGenre/{movieUUID}")
     public Movie addGenreToMovie(@PathVariable UUID movieUUID, @RequestBody List<UUID> genreUUIDs) throws CompileTimeException {
         return movieService.addGenreToMovie(movieUUID, genreUUIDs);
     }
@@ -76,5 +77,20 @@ public class MovieController {
         return movieService.getMoviesByYearRange(startDate, endDate);
     }
 
+    @PutMapping("/movie/addRole/{movieUUID}/{personUUID}/{roleTitle}")
+    public Movie addRoleToMovie(@PathVariable UUID movieUUID, @PathVariable UUID personUUID, @PathVariable String roleTitle) throws CompileTimeException {
+        return movieService.addRoleToMovie(movieUUID, personUUID, roleTitle);
+    }
+
+    // Upload a file to S3
+    @PostMapping("/movie/uploadImage/{movieUUID}")
+    public String uploadFile(@PathVariable UUID movieUUID, @RequestParam("file") MultipartFile file) throws CompileTimeException, IOException {
+        return  movieService.uploadImage(movieUUID, file);
+    }
+
+    @PostMapping("/movie/filterMovies")
+    public List<Movie> filterMovies(@RequestBody MovieFilers movieFilers) {
+        return movieService.filterMovies(movieFilers);
+    }
 
 }

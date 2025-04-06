@@ -18,22 +18,30 @@ public class Movie {
     @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "year")
-    private Date year;
+    @Column(name = "release_Year")
+    private Date releaseYear;
 
-    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
-    @JoinTable(
-            name = "movie_genre",
-            joinColumns = @JoinColumn(name = "movie_id"),
-            inverseJoinColumns = @JoinColumn(name = "genre_id")
-    )
-    @JsonManagedReference
-    private List<Genre> genres;
+    @Column(name = "description", nullable = true)
+    private String description;
+
+    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference(value = "movie-movieGenres")
+    private List<MovieGenre> movieGenres;
+
+    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference(value = "movie-movieLists") // Managed reference from Movie to MovieList
+    private List<MovieList> movieList;
 
     @OneToMany(mappedBy = "movie")
+    @JsonManagedReference(value = "movie-movieCasts")
     private List<MovieCast> movieCastList;
 
+    @OneToMany(mappedBy = "movie")
+    @JsonManagedReference(value = "movie-reviews")
+    private List<Review> reviews;
 
+    @Column(name = "imageUrl", nullable = true)
+    private String imageUrl;
 
 
 }

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.Date;
 
 @Data
 public class PersonDTO {
@@ -24,6 +25,6 @@ public class PersonDTO {
     @Pattern(regexp = "^[a-zA-Z]+$", message = "Nationality should contain only letters")
     private String nationality;
 
-    private LocalDate birthDate;
-    private LocalDate deathDate;
+    private Date birthDate;
+    private Date deathDate;
 }
