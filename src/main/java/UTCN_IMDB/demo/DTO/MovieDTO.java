@@ -9,8 +9,15 @@ public class MovieDTO
 {
     private String title;
     private Date releaseYear;
+    @Size(max = 500)
+    private String description;
 
-
+    public String getDescription() {
+        return description;
+    }
+    public void setDescription(String description) {
+        this.description = description;
+    }
     public String getTitle() {
         return title;
     }

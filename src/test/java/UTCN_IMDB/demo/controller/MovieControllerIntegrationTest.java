@@ -4,6 +4,7 @@ import UTCN_IMDB.demo.DTO.MovieDTO;
 import UTCN_IMDB.demo.DTO.ReviewDTO;
 import UTCN_IMDB.demo.DTO.UserDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
+import UTCN_IMDB.demo.enums.UserRole;
 import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.repository.*;
 import UTCN_IMDB.demo.service.MovieService;
@@ -78,6 +79,8 @@ public class MovieControllerIntegrationTest {
     private Genre genreComedy;
     @Autowired
     private UserService userService;
+    @Autowired
+    private UserRepository userRepository;
 
     @PostConstruct
     public void init() {
@@ -288,44 +291,65 @@ public class MovieControllerIntegrationTest {
     void testMovieDetails() throws Exception {
         MovieDTO movieDTO = new MovieDTO();
         movieDTO.setTitle("Inception");
+        movieDTO.setDescription("A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a CEO.");
         movieDTO.setReleaseYear(dateFormat.parse("2010-07-16"));
-
         Movie movie = movieService.addMovie(movieDTO);
 
         UserDTO userDTO = new UserDTO();
         userDTO.setUsername("testuser");
         userDTO.setPassword("password");
-
+        userDTO.setEmail("test@gmail.com");
+        userDTO.setRole(UserRole.NORMAL);
         User user = userService.addUser(userDTO);
+
+
+        UserDTO userDTO2 = new UserDTO();
+        userDTO2.setUsername("testuser2");
+        userDTO2.setPassword("password2");
+        userDTO2.setEmail("test2@gmail.com");
+        userDTO2.setRole(UserRole.REVIEWER);
+        User user2 = userService.addUser(userDTO2);
 
         ReviewDTO reviewDTO = new ReviewDTO(movie.getMovieId());
         reviewDTO.setRating(4.5f);
         reviewDTO.setReviewText("Great movie!");
-
         String reviewJson = objectMapper.writeValueAsString(reviewDTO);
+
+        ReviewDTO reviewDTO2 = new ReviewDTO(movie.getMovieId());
+        reviewDTO2.setRating(3.5f);
+        reviewDTO2.setReviewText("Good movie!");
+        String reviewJson2 = objectMapper.writeValueAsString(reviewDTO2);
+
+        Person person = new Person();
+        person.setFirstName("John");
+        person.setLastName("Doe");
+        person.setGender("Male");
+        person.setBirthDate(dateFormat.parse("1990-01-01"));
+        person = personRepository.save(person);
 
         mockMvc.perform(post("/user/addReview/" + user.getUserId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(reviewJson))
                 .andExpect(status().isOk());
 
+        mockMvc.perform(post("/user/addReview/" + user2.getUserId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reviewJson2))
+                .andExpect(status().isOk());
+
+        movieService.addRoleToMovie(movie.getMovieId(), person.getPersonId(), "Neo");
+
         mockMvc.perform(get("/movie/details/" + movie.getMovieId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").value(movie.getMovieId().toString()))
                 .andExpect(jsonPath("$.title").value("Inception"))
-                .andExpect(jsonPath("$.averageRating").value(4.5))
-                .andExpect(jsonPath("$.userReviews[0].comment").value("Great movie!"));
-
-
-
-
-
-
-
-
-
+                .andExpect(jsonPath("$.averageUserRating").value(4.5))
+                .andExpect(jsonPath("$.averageCriticRating").value(3.5))
+                .andExpect(jsonPath("$.averageRating").value(4.0))
+                .andExpect(jsonPath("$.userReviews[0].comment").value("Great movie!"))
+                .andExpect(jsonPath("$.actorsAndRoles[0].actor.firstName").value("John"))
+                .andExpect(jsonPath("$.actorsAndRoles[0].actor.lastName").value("Doe"))
+                .andExpect(jsonPath("$.actorsAndRoles[0].roles[0].roleName").value("Neo"));
     }
-
-
 
 }
