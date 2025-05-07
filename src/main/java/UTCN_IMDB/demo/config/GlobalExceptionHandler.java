@@ -22,9 +22,7 @@ public class GlobalExceptionHandler {
         BindingResult result = ex.getBindingResult();
         Map<String, String> errorMap = new HashMap<>();
 
-        for (FieldError error : result.getFieldErrors()) {
-            errorMap.put(error.getField(), error.getDefaultMessage());
-        }
+        result.getFieldErrors().forEach(error -> { errorMap.put(error.getField(), error.getDefaultMessage());});
 
         log.error("Validation error: {}", errorMap);
 

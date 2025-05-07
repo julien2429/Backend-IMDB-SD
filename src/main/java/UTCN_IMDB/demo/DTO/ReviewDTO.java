@@ -10,6 +10,9 @@ import java.util.UUID;
 @Data
 public class ReviewDTO {
 
+    @NotBlank(message = "Username cannot be blank")
+    private String username;
+
     @NotBlank(message = "Review cannot be blank")
     private String reviewText;
 

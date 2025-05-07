@@ -158,7 +158,6 @@ class UserServiceTest{
         LoginResponse result = userService.login(username, password); // Assuming a login method
 
         assertTrue(result.success());
-        assertEquals(UserRole.ADMIN, result.role()); // Assert the role
         verify(userRepository, times(1)).findByUsername(username); // Changed to findByUsername
     }
 

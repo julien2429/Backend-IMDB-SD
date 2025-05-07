@@ -2,13 +2,14 @@ package UTCN_IMDB.demo.controller;
 
 import UTCN_IMDB.demo.DTO.PersonDTO;
 import UTCN_IMDB.demo.DTO.RoleDTO;
-import UTCN_IMDB.demo.model.Movie;
-import UTCN_IMDB.demo.model.MovieCast;
-import UTCN_IMDB.demo.model.Person;
-import UTCN_IMDB.demo.model.Role;
+import UTCN_IMDB.demo.config.BCryptHashing;
+import UTCN_IMDB.demo.enums.UserRole;
+import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.repository.MovieRepository;
 import UTCN_IMDB.demo.repository.PersonRepository;
 import UTCN_IMDB.demo.repository.RoleRepository;
+import UTCN_IMDB.demo.repository.UserRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,8 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
@@ -48,12 +51,17 @@ public class PersonControllerIntegrationTest {
     private RoleRepository roleRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     private Person person1;
     private Person person2;
     private Movie movie1;
+    private User admin;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private String token;
 
     @BeforeEach
     @Transactional
@@ -61,10 +69,39 @@ public class PersonControllerIntegrationTest {
         personRepository.deleteAll();
         movieRepository.deleteAll();
         roleRepository.deleteAll();
+        userRepository.deleteAll();
 
         objectMapper.registerModule(new JavaTimeModule());
         dateFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
         seedDatabase();
+        createAndLoginAdminUser();
+    }
+
+    @Transactional
+    protected void createAndLoginAdminUser() throws Exception {
+
+        admin = new User();
+        admin.setUsername("admin");
+        admin.setEmail("admin@admi.com");
+        String hashedPassword = BCryptHashing.hashPassword("admin");
+        admin.setPassword(hashedPassword);
+        admin.setRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        MvcResult result = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "username": "admin",
+                        "password": "admin"
+                    }
+                """))
+            .andExpect(status().isOk())
+                .andReturn();;
+
+        String responseBody = result.getResponse().getContentAsString();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
+        this.token = jsonNode.get("token").asText();
     }
 
     private void seedDatabase() throws Exception {
@@ -91,7 +128,10 @@ public class PersonControllerIntegrationTest {
     @Test
     @Transactional
     void testGetPersons() throws Exception {
-        mockMvc.perform(get("/person"))
+
+
+        mockMvc.perform(get("/person")
+                .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].firstName").value("Keanu"))
@@ -103,7 +143,7 @@ public class PersonControllerIntegrationTest {
     @Test
     @Transactional
     void testGetPersonByFirstName() throws Exception {
-        mockMvc.perform(get("/person/firstName/Keanu"))
+        mockMvc.perform(get("/person/firstName/Keanu").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Keanu"))
                 .andExpect(jsonPath("$.birthDate").value("1964-09-02T00:00:00.000+00:00")); // Date format
@@ -112,7 +152,7 @@ public class PersonControllerIntegrationTest {
     @Test
     @Transactional
     void testGetPersonByLastName() throws Exception {
-        mockMvc.perform(get("/person/lastName/Fishburne"))
+        mockMvc.perform(get("/person/lastName/Fishburne").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.lastName").value("Fishburne"))
                 .andExpect(jsonPath("$.birthDate").value("1961-07-30T00:00:00.000+00:00")); // Date format
@@ -122,7 +162,8 @@ public class PersonControllerIntegrationTest {
     @Transactional
     void testGetPersonByBirthDate() throws Exception {
 
-        mockMvc.perform(get("/person/birthDate/1964-09-02"))
+        mockMvc.perform(get("/person/birthDate/1964-09-02")
+                .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Keanu"))
                 .andExpect(jsonPath("$.birthDate").value("1964-09-02T00:00:00.000+00:00")); // Date format
@@ -141,7 +182,7 @@ public class PersonControllerIntegrationTest {
 
         mockMvc.perform(post("/person")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(personJson))
+                        .content(personJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.personId").exists())
                 .andExpect(jsonPath("$.firstName").value("Carrie"))
@@ -161,7 +202,7 @@ public class PersonControllerIntegrationTest {
 
         mockMvc.perform(put("/person/" + personId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(personJson))
+                        .content(personJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.personId").value(personId.toString()))
                 .andExpect(jsonPath("$.firstName").value("John"))
@@ -173,17 +214,17 @@ public class PersonControllerIntegrationTest {
     void testDeletePerson() throws Exception {
         UUID personId = person1.getPersonId();
 
-        mockMvc.perform(delete("/person/" + personId))
+        mockMvc.perform(delete("/person/" + personId).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/person/" + personId))
+        mockMvc.perform(get("/person/" + personId).header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     @Transactional
     void testGetPersonById() throws Exception {
-        mockMvc.perform(get("/person/" + person1.getPersonId()))
+        mockMvc.perform(get("/person/" + person1.getPersonId()).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.personId").value(person1.getPersonId().toString()))
                 .andExpect(jsonPath("$.firstName").value("Keanu"))

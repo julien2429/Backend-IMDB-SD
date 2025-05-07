@@ -100,9 +100,9 @@ public class UserService {
     }
 
     @Transactional
-    public User addReview(UUID uuid, ReviewDTO reviewDTO) throws CompileTimeException {
-        User user = userRepository.findById(uuid).orElseThrow(
-                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+    public User addReview( ReviewDTO reviewDTO) throws CompileTimeException {
+        User user = userRepository.findByUsername(reviewDTO.getUsername()).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + reviewDTO.getUsername() + " not found"));
 
         Movie movie = movieRepository.findById(reviewDTO.getMovieId()).orElseThrow(
                 () -> new CompileTimeException("Movie with id " + reviewDTO.getMovieId() + " not found"));
@@ -131,6 +131,11 @@ public class UserService {
 
 
         return userRepository.save(user);
+    }
+
+    public User getUserByUsername(String username) throws CompileTimeException {
+        return userRepository.findByUsername(username).orElseThrow(
+                () -> new CompileTimeException("User with username " + username + " not found"));
     }
 
 
@@ -242,14 +247,12 @@ public class UserService {
         if (BCryptHashing.checkPassword(password, user.getPassword())) {
             return new LoginResponse(
                     true,
-                    user.getRole(),
                     "Login successful",
                     null
             );
         } else {
             return new LoginResponse(
                     false,
-                    null,
                     "Invalid password",
                     null
             );

@@ -480,7 +480,7 @@ class MovieServiceTest {
         when(movieRepository.findById(movieId)).thenReturn(Optional.empty());
 
         // when, then
-        assertThrows(IllegalStateException.class, () -> movieService.getMovieDetails(movieId));
+        assertThrows(CompileTimeException.class, () -> movieService.getMovieDetails(movieId));
         verify(movieRepository, times(1)).findById(movieId);
     }
 

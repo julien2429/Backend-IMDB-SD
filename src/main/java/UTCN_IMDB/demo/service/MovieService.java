@@ -57,6 +57,7 @@ public class MovieService {
         existingMovie.setTitle(movieDTO.getTitle());
         existingMovie.setReleaseYear(movieDTO.getReleaseYear());
         existingMovie.setMovieId(uuid);
+        existingMovie.setDescription(movieDTO.getDescription());
         return movieRepository.save(existingMovie);
     }
 
@@ -81,16 +82,23 @@ public class MovieService {
         List<MovieGenre> movieGenres = new ArrayList<>();
         movieGenreRepository.deleteByMovie_MovieId(movieUUID);
 
-        for (UUID genreUUID : genreUUIDs) {
-            Genre genre = genreRepository.findById(genreUUID).orElseThrow(
-                    () -> new CompileTimeException("Genre with uuid " + genreUUID + " not found"));
+
+        genreUUIDs.forEach(genreUUID ->{
+            Genre genre = null;
+            try {
+                genre = genreRepository.findById(genreUUID).orElseThrow(
+                        () -> new CompileTimeException("Genre with uuid " + genreUUID + " not found"));
+            } catch (CompileTimeException e) {
+                throw new RuntimeException(e);
+            }
 
             MovieGenre movieGenre = new MovieGenre();
             movieGenre.setMovie(movie);
             movieGenre.setGenre(genre);
             movieGenres.add(movieGenre);
             movieGenreRepository.save(movieGenre);
-        }
+        });
+
         movie.getMovieGenres().clear();
         movie.getMovieGenres().addAll(movieGenres);
 
@@ -104,9 +112,11 @@ public class MovieService {
 
     private List<String> getGenreTitles(Movie movie) {
         List<String> genreTitles = new ArrayList<>();
-        for (MovieGenre movieGenre : movie.getMovieGenres()) {
+
+        movie.getMovieGenres().forEach(movieGenre -> {
             genreTitles.add(movieGenre.getGenre().getTitle());
-        }
+        });
+
         return genreTitles;
     }
 
@@ -216,7 +226,7 @@ public class MovieService {
         List<Movie> movies = movieRepository.findAll();
         List<Movie> filteredMovies = new ArrayList<>();
 
-        for (Movie movie : movies) {
+        movies.forEach(movie -> {
             boolean matches = true;
 
             if (movieFilers.getTitle().isPresent() &&
@@ -224,12 +234,12 @@ public class MovieService {
                 matches = false;
             }
 
-            if (movieFilers.getEndDate().isPresent() &&
+            if (movieFilers.getEndDate().isPresent() && movie.getReleaseYear()!=null &&
                     !movie.getReleaseYear().before(movieFilers.getEndDate().get())) {
                 matches = false;
             }
 
-            if (movieFilers.getStartDate().isPresent() &&
+            if (movieFilers.getStartDate().isPresent() && movie.getReleaseYear()!=null &&
                     !movie.getReleaseYear().after(movieFilers.getStartDate().get())) {
                 matches = false;
             }
@@ -245,7 +255,7 @@ public class MovieService {
             if (matches) {
                 filteredMovies.add(movie);
             }
-        }
+        });
 
         return filteredMovies;
     }

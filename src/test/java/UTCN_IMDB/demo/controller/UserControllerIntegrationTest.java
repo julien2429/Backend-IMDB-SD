@@ -2,9 +2,12 @@ package UTCN_IMDB.demo.controller;
 
 
 import UTCN_IMDB.demo.DTO.ReviewDTO;
+import UTCN_IMDB.demo.config.BCryptHashing;
+import UTCN_IMDB.demo.enums.UserRole;
 import UTCN_IMDB.demo.model.User;
 import UTCN_IMDB.demo.repository.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -41,6 +45,7 @@ public class UserControllerIntegrationTest {
 
     private static final String FIXTURE_PATH = "src/test/resources/fixtures/user/";
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private String token;
 
     @BeforeEach
     @Transactional
@@ -48,6 +53,7 @@ public class UserControllerIntegrationTest {
         userRepository.deleteAll();
         //userRepository.flush();
         seedDatabase();
+        createAndLoginAdminUser();
     }
 
     @Transactional
@@ -58,10 +64,30 @@ public class UserControllerIntegrationTest {
     }
 
 
+    @Transactional
+    protected void createAndLoginAdminUser() throws Exception {
+
+        MvcResult result = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                    {
+                        "username": "admin",
+                        "password": "admin12345"
+                    }
+                """))
+                .andExpect(status().isOk())
+                .andReturn();;
+
+        String responseBody = result.getResponse().getContentAsString();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
+        this.token = jsonNode.get("token").asText();
+    }
+
+
     @Test
     @Transactional
     void testGetUsers() throws Exception {
-        mockMvc.perform(get("/user"))
+        mockMvc.perform(get("/user").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()")
                         .value(2))
@@ -85,7 +111,7 @@ public class UserControllerIntegrationTest {
 
         mockMvc.perform(post("/user")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validPersonJson))
+                        .content(validPersonJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").exists())
                 .andExpect(jsonPath("$.username").value("LucaTheGreat"))
@@ -101,7 +127,7 @@ public class UserControllerIntegrationTest {
 
         mockMvc.perform(post("/user")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalidPersonJson))
+                        .content(invalidPersonJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.username")
                         .value("Username should be between 3 and 20 characters"))
@@ -117,7 +143,7 @@ public class UserControllerIntegrationTest {
 
         mockMvc.perform(post("/user/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validLoginJson))
+                        .content(validLoginJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
@@ -127,11 +153,10 @@ public class UserControllerIntegrationTest {
     void testLogin_InvalidPayload() throws Exception {
         String validLoginJson = loadFixture("login_user_invalid.json");
 
-        mockMvc.perform(post("/user/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validLoginJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("User with username admin23 not found"));
+                        .content(validLoginJson).header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -139,9 +164,9 @@ public class UserControllerIntegrationTest {
     void testLogin_InvalidPassword() throws Exception {
         String validLoginJson = loadFixture("login_user_worng_password.json");
 
-        mockMvc.perform(post("/user/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(validLoginJson))
+                        .content(validLoginJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false));
     }

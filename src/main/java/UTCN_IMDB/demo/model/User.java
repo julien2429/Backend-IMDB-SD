@@ -33,6 +33,10 @@ public class User {
     @OneToMany(mappedBy = "user")
     private List<Review> reviews;
 
+    @JsonManagedReference(value = "forgotten-passwords")
+    @OneToMany(mappedBy = "user")
+    private List<ForgottenPasswordData> forgottenPasswords;
+
     @Column(name = "imageUrl", nullable = true)
     private String imageUrl;
 

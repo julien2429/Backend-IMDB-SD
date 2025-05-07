@@ -3,6 +3,7 @@ package UTCN_IMDB.demo.controller;
 import UTCN_IMDB.demo.DTO.MovieDTO;
 import UTCN_IMDB.demo.DTO.ReviewDTO;
 import UTCN_IMDB.demo.DTO.UserDTO;
+import UTCN_IMDB.demo.config.BCryptHashing;
 import UTCN_IMDB.demo.config.CompileTimeException;
 import UTCN_IMDB.demo.enums.UserRole;
 import UTCN_IMDB.demo.model.*;
@@ -10,6 +11,7 @@ import UTCN_IMDB.demo.repository.*;
 import UTCN_IMDB.demo.service.MovieService;
 import UTCN_IMDB.demo.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -22,6 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -64,6 +67,8 @@ public class MovieControllerIntegrationTest {
     @Autowired
     private PersonRepository personRepository;
 
+    @Autowired
+    private UserRepository userRepository;
 
 
     @Autowired
@@ -72,6 +77,7 @@ public class MovieControllerIntegrationTest {
     private static final String FIXTURE_PATH = "src/test/resources/fixtures/";
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private String token;
 
     private Movie movie1;
     private Movie movie2;
@@ -79,8 +85,7 @@ public class MovieControllerIntegrationTest {
     private Genre genreComedy;
     @Autowired
     private UserService userService;
-    @Autowired
-    private UserRepository userRepository;
+
 
     @PostConstruct
     public void init() {
@@ -98,6 +103,7 @@ public class MovieControllerIntegrationTest {
         movieCastRepository.deleteAll();
         roleRepository.deleteAll();
         personRepository.deleteAll();
+        userRepository.deleteAll();
 
         personRepository.flush();
         movieRepository.flush();
@@ -109,6 +115,35 @@ public class MovieControllerIntegrationTest {
 
         dateFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
         seedDatabase();
+        createAndLoginAdminUser();
+    }
+
+
+    @Transactional
+    protected void createAndLoginAdminUser() throws Exception {
+
+        User admin = new User();
+        admin.setUsername("admin");
+        admin.setEmail("admin@admi.com");
+        String hashedPassword = BCryptHashing.hashPassword("admin");
+        admin.setPassword(hashedPassword);
+        admin.setRole(UserRole.ADMIN);
+        userRepository.save(admin);
+
+        MvcResult result = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                    {
+                        "username": "admin",
+                        "password": "admin"
+                    }
+                """))
+                .andExpect(status().isOk())
+                .andReturn();;
+
+        String responseBody = result.getResponse().getContentAsString();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
+        this.token = jsonNode.get("token").asText();
     }
 
     @Transactional
@@ -148,7 +183,7 @@ public class MovieControllerIntegrationTest {
     @Test
     @Transactional
     void testGetMovies() throws Exception {
-        mockMvc.perform(get("/movie"))
+        mockMvc.perform(get("/movie").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].title").value("The Matrix"))
@@ -166,7 +201,7 @@ public class MovieControllerIntegrationTest {
 
         mockMvc.perform(post("/movie")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(movieJson))
+                        .content(movieJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").exists())
                 .andExpect(jsonPath("$.title").value("New Movie"))
@@ -183,7 +218,7 @@ public class MovieControllerIntegrationTest {
 
         mockMvc.perform(post("/movie/" + movieId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(movieJson))
+                        .content(movieJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").value(movieId.toString()))
                 .andExpect(jsonPath("$.title").value("Updated Matrix"))
@@ -195,17 +230,17 @@ public class MovieControllerIntegrationTest {
     void testDeleteMovie() throws Exception {
         UUID movieId = movie1.getMovieId();
 
-        mockMvc.perform(delete("/movie/" + movieId))
+        mockMvc.perform(delete("/movie/" + movieId).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/movie/" + movieId))
+        mockMvc.perform(get("/movie/" + movieId).header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     @Transactional
     void testGetMovieById() throws Exception {
-        mockMvc.perform(get("/movie/" + movie1.getMovieId()))
+        mockMvc.perform(get("/movie/" + movie1.getMovieId()).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").value(movie1.getMovieId().toString()))
                 .andExpect(jsonPath("$.title").value("The Matrix"));
@@ -222,7 +257,7 @@ public class MovieControllerIntegrationTest {
 
         mockMvc.perform(post("/movie/addGenre/" + movieId )
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(genreIdsJson))
+                        .content(genreIdsJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").value(movieId.toString()))
                 .andExpect(jsonPath("$.movieGenres.length()").value(1))
@@ -232,7 +267,7 @@ public class MovieControllerIntegrationTest {
     @Test
     @Transactional
     void testGetMoviesByTitle() throws Exception {
-        mockMvc.perform(get("/movie/title/The"))
+        mockMvc.perform(get("/movie/title/The").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].title").value("The Matrix"));
@@ -243,7 +278,7 @@ public class MovieControllerIntegrationTest {
     @Test
     @Transactional
     void testGetMovieDetails() throws Exception {
-        mockMvc.perform(get("/movie/details/" + movie1.getMovieId() ))
+        mockMvc.perform(get("/movie/details/" + movie1.getMovieId() ).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").value(movie1.getMovieId().toString()))
                 .andExpect(jsonPath("$.title").value("The Matrix"))
@@ -256,7 +291,7 @@ public class MovieControllerIntegrationTest {
         String filterJson = objectMapper.writeValueAsString(new MovieFilers("Matrix", null, null, null, null));
         mockMvc.perform(post("/movie/filterMovies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(filterJson))
+                        .content(filterJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].title").value("The Matrix"));
@@ -268,7 +303,7 @@ public class MovieControllerIntegrationTest {
         String filterJson = objectMapper.writeValueAsString(new MovieFilers(null, List.of("Comedy"), null, null, null));
         mockMvc.perform(post("/movie/filterMovies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(filterJson))
+                        .content(filterJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].title").value("Rush Hour"));
@@ -280,7 +315,7 @@ public class MovieControllerIntegrationTest {
         String filterJson = objectMapper.writeValueAsString(new MovieFilers(null, null, null, dateFormat.parse("1998-01-01"), dateFormat.parse("1998-12-31")));
         mockMvc.perform(post("/movie/filterMovies")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(filterJson))
+                        .content(filterJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].title").value("Rush Hour"));
@@ -311,11 +346,13 @@ public class MovieControllerIntegrationTest {
         User user2 = userService.addUser(userDTO2);
 
         ReviewDTO reviewDTO = new ReviewDTO(movie.getMovieId());
+        reviewDTO.setUsername(user.getUsername());
         reviewDTO.setRating(4.5f);
         reviewDTO.setReviewText("Great movie!");
         String reviewJson = objectMapper.writeValueAsString(reviewDTO);
 
         ReviewDTO reviewDTO2 = new ReviewDTO(movie.getMovieId());
+        reviewDTO2.setUsername(user2.getUsername());
         reviewDTO2.setRating(3.5f);
         reviewDTO2.setReviewText("Good movie!");
         String reviewJson2 = objectMapper.writeValueAsString(reviewDTO2);
@@ -327,19 +364,19 @@ public class MovieControllerIntegrationTest {
         person.setBirthDate(dateFormat.parse("1990-01-01"));
         person = personRepository.save(person);
 
-        mockMvc.perform(post("/user/addReview/" + user.getUserId())
+        mockMvc.perform(post("/user/addReview")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson))
+                        .content(reviewJson).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/user/addReview/" + user2.getUserId())
+        mockMvc.perform(post("/user/addReview")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(reviewJson2))
+                        .content(reviewJson2).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
         movieService.addRoleToMovie(movie.getMovieId(), person.getPersonId(), "Neo");
 
-        mockMvc.perform(get("/movie/details/" + movie.getMovieId()))
+        mockMvc.perform(get("/movie/details/" + movie.getMovieId()).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.movieId").value(movie.getMovieId().toString()))
                 .andExpect(jsonPath("$.title").value("Inception"))

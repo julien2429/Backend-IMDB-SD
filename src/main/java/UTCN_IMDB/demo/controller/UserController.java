@@ -55,9 +55,9 @@ public class UserController {
         }
     }
 
-    @PostMapping("/user/addReview/{uuid}")
-    public User addReview(@PathVariable UUID uuid, @Valid @RequestBody ReviewDTO reviewDTO) throws CompileTimeException {
-        return userService.addReview(uuid, reviewDTO);
+    @PostMapping("/user/addReview")
+    public User addReview(@Valid @RequestBody ReviewDTO reviewDTO) throws CompileTimeException {
+        return userService.addReview(reviewDTO);
     }
 
     @PostMapping("/user/createList/{uuid}/{listName}")
