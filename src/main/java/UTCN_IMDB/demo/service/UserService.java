@@ -10,6 +10,7 @@ import UTCN_IMDB.demo.repository.MovieRepository;
 import UTCN_IMDB.demo.repository.ReviewRepository;
 import UTCN_IMDB.demo.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class UserService {
     private final ListsRepository listsRepository;
     private final ReviewRepository reviewRepository;
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @Transactional
     public List<User> getUsers() {
         return userRepository.findAll();
