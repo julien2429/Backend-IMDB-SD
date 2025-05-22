@@ -44,17 +44,17 @@ public class LoginController {
 
             String token = jwtGenerator.generateToken(authentication);
 
-            LoginResponse loginResponse = new LoginResponse(true, null, token);
+            LoginResponse loginResponse = new LoginResponse(true, null, token, userService.getUserByUsername(loginRequest.username()).getUserId());
             return ResponseEntity.ok(loginResponse);
 
         } catch (BadCredentialsException ex) {
             return ResponseEntity
                     .status(401)
-                    .body(new LoginResponse(false, "Invalid username or password", null));
+                    .body(new LoginResponse(false, "nvalid username or password", null, null));
         } catch (Exception ex) {
             return ResponseEntity
                     .status(500)
-                    .body(new LoginResponse(false, "Internal server error", null));
+                    .body(new LoginResponse(false, "Internal server error", null, null));
         }
     }
 

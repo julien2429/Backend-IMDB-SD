@@ -2,7 +2,10 @@ package UTCN_IMDB.demo.controller;
 
 
 import UTCN_IMDB.demo.DTO.MovieDTO;
+import UTCN_IMDB.demo.DTO.MovieRoleDTO;
+import UTCN_IMDB.demo.DTO.RoleDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
+import UTCN_IMDB.demo.enums.ReviewStatus;
 import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.service.MovieService;
 import jakarta.validation.Valid;
@@ -82,6 +85,21 @@ public class MovieController {
         return movieService.addRoleToMovie(movieUUID, personUUID, roleTitle);
     }
 
+    @GetMapping("/movie/getRoles/{movieUUID}")
+    public List<MovieRoleDTO> getRolesByMovie(@PathVariable UUID movieUUID) throws CompileTimeException {
+        return movieService.getRolesByMovie(movieUUID);
+    }
+
+    @PostMapping("/movie/removeRole/{movieCastUUID}")
+    public void removeRoleFromMovie(@PathVariable UUID movieCastUUID) throws CompileTimeException {
+        movieService.removeRoleFromMovie(movieCastUUID);
+    }
+
+    @PostMapping("/movie/editRole/{movieCastUUID}/{roleTitle}")
+    public MovieCast editRoleInMovie(@PathVariable UUID movieCastUUID, @PathVariable String roleTitle) throws CompileTimeException {
+        return movieService.editRoleInMovie(movieCastUUID, roleTitle);
+    }
+
     // Upload a file to S3
     @PostMapping("/movie/uploadImage/{movieUUID}")
     public String uploadFile(@PathVariable UUID movieUUID, @RequestParam("file") MultipartFile file) throws CompileTimeException, IOException {
@@ -92,5 +110,37 @@ public class MovieController {
     public List<Movie> filterMovies(@RequestBody MovieFilers movieFilers) {
         return movieService.filterMovies(movieFilers);
     }
+
+    @PostMapping("/movie/approveReview/{reviewUUID}")
+    public Review approveReview(@PathVariable UUID reviewUUID) throws CompileTimeException {
+        return movieService.changeReviewStatus(reviewUUID, ReviewStatus.APPROVED);
+    }
+
+    @PostMapping("/movie/rejectReview/{reviewUUID}")
+    public Review rejectReview(@PathVariable UUID reviewUUID) throws CompileTimeException {
+        return movieService.changeReviewStatus(reviewUUID, ReviewStatus.REJECTED);
+    }
+
+    @PostMapping("/movie/setToPending/{reviewUUID}")
+    public Review setToPending(@PathVariable UUID reviewUUID) throws CompileTimeException {
+        return movieService.changeReviewStatus(reviewUUID, ReviewStatus.PENDING);
+    }
+
+    @GetMapping("/movie/getAllPendingReviews")
+    public List<Review> getAllPendingReviews() {
+        return movieService.getReviewsByStatus(ReviewStatus.PENDING);
+    }
+
+    @GetMapping("/movie/getAllApprovedReviews")
+    public List<Review> getAllApprovedReviews() {
+        return movieService.getReviewsByStatus(ReviewStatus.APPROVED);
+    }
+
+    @GetMapping("/movie/getAllRejectedReviews")
+    public List<Review> getAllRejectedReviews() {
+        return movieService.getReviewsByStatus(ReviewStatus.REJECTED);
+    }
+
+
 
 }

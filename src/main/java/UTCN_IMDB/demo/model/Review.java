@@ -1,5 +1,6 @@
 package UTCN_IMDB.demo.model;
 
+import UTCN_IMDB.demo.enums.ReviewStatus;
 import UTCN_IMDB.demo.enums.UserRole;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
@@ -21,6 +22,9 @@ public class Review {
 
     @Column(name = "comment", nullable = true)
     private String comment;
+
+    @Column(name = "status", nullable = true)
+    private ReviewStatus status;
 
     @ManyToOne
     @JoinColumn(name = "movie_id")

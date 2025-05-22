@@ -1,8 +1,10 @@
 package UTCN_IMDB.demo.controller;
 
+import UTCN_IMDB.demo.DTO.ListResponseDTO;
 import UTCN_IMDB.demo.DTO.ReviewDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
 import UTCN_IMDB.demo.DTO.UserDTO;
+import UTCN_IMDB.demo.model.Lists;
 import UTCN_IMDB.demo.model.LoginRequest;
 import UTCN_IMDB.demo.model.LoginResponse;
 import UTCN_IMDB.demo.model.User;
@@ -45,16 +47,6 @@ public class UserController {
         return userService.addUser(userDTO);
     }
 
-    @PostMapping("/user/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) throws CompileTimeException {
-        LoginResponse loginResponse = userService.login(loginRequest.username(), loginRequest.password());
-        if(loginResponse.success()) {
-            return ResponseEntity.ok(loginResponse);
-        } else {
-            return ResponseEntity.status(UNAUTHORIZED.value()).body(loginResponse);
-        }
-    }
-
     @PostMapping("/user/addReview")
     public User addReview(@Valid @RequestBody ReviewDTO reviewDTO) throws CompileTimeException {
         return userService.addReview(reviewDTO);
@@ -68,6 +60,31 @@ public class UserController {
     @PostMapping("/user/deleteList/{uuid}/{listId}")
     public User deleteList(@PathVariable UUID uuid, @PathVariable UUID listId) throws CompileTimeException {
         return userService.deleteList(uuid, listId);
+    }
+
+    @PostMapping("/user/addToList/{uuid}/{listName}/{movieId}")
+    public User addToList(@PathVariable UUID uuid, @PathVariable String listName, @PathVariable UUID movieId) throws CompileTimeException {
+        return userService.addToList(uuid, listName, movieId);
+    }
+
+    @PostMapping("/user/removeFromList/{uuid}/{listName}/{movieId}")
+    public User removeFromList(@PathVariable UUID uuid, @PathVariable String listName, @PathVariable UUID movieId) throws CompileTimeException {
+        return userService.removeFromList(uuid, listName, movieId);
+    }
+
+    @GetMapping("/user/getList/{uuid}/{listId}")
+    public ListResponseDTO getList(@PathVariable UUID uuid, @PathVariable UUID listId) throws CompileTimeException {
+        return userService.getList(uuid, listId);
+    }
+
+    @GetMapping("/user/getAllLists/{uuid}")
+    public List<ListResponseDTO> getAllLists(@PathVariable UUID uuid) throws CompileTimeException {
+        return userService.getAllLists(uuid);
+    }
+
+    @GetMapping("/user/findMovieInLists/{uuid}/{movieId}")
+    public List<String> findMovieInLists(@PathVariable UUID uuid, @PathVariable UUID movieId) throws CompileTimeException {
+        return userService.findMovieInLists(uuid, movieId);
     }
 
     @PostMapping("/user/addMovieToList/{uuid}/{listId}/{movieId}")

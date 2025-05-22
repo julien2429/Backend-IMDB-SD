@@ -1,9 +1,11 @@
 package UTCN_IMDB.demo.service;
 
+import UTCN_IMDB.demo.DTO.ListResponseDTO;
 import UTCN_IMDB.demo.DTO.ReviewDTO;
 import UTCN_IMDB.demo.config.BCryptHashing;
 import UTCN_IMDB.demo.config.CompileTimeException;
 import UTCN_IMDB.demo.DTO.UserDTO;
+import UTCN_IMDB.demo.enums.ReviewStatus;
 import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.repository.ListsRepository;
 import UTCN_IMDB.demo.repository.MovieRepository;
@@ -30,7 +32,8 @@ public class UserService {
 
     @PreAuthorize("hasAuthority('ADMIN')")
     @Transactional
-    public List<User> getUsers() {
+    public List<User>
+    getUsers() {
         return userRepository.findAll();
     }
 
@@ -118,6 +121,7 @@ public class UserService {
         if (review != null) {
             review.setComment(reviewDTO.getReviewText());
             review.setRating(reviewDTO.getRating());
+            review.setStatus(ReviewStatus.PENDING);
             reviewRepository.save(review);
         } else {
             Review newReview = new Review();
@@ -125,6 +129,7 @@ public class UserService {
             newReview.setRating(reviewDTO.getRating());
             newReview.setUser(user);
             newReview.setMovie(movie);
+            newReview.setStatus(ReviewStatus.PENDING);
             movie.getReviews().add(newReview);
             user.getReviews().add(newReview);
             reviewRepository.save(newReview);
@@ -178,7 +183,51 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User addToList(UUID uuid, String listName, UUID movieId) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
 
+        Lists list = user.getLists().stream()
+                .filter(l -> l.getListName().equals(listName))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("List with name " + listName + " not found"));
+
+        Movie movie = movieRepository.findById(movieId).orElseThrow(
+                () -> new CompileTimeException("Movie with id " + movieId + " not found"));
+
+        MovieList movieList = new MovieList();
+        movieList.setMovie(movie);
+        movieList.setList(list);
+
+        if (list.getMovieList() == null) {
+            list.setMovieList(new ArrayList<>());
+        }
+        List<MovieList> movieLists = list.getMovieList();
+        movieLists.add(movieList);
+        movieList.setList(list);
+        return userRepository.save(user);
+    }
+
+    public User removeFromList(UUID uuid, String listName, UUID movieId) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        Lists list = user.getLists().stream()
+                .filter(l -> l.getListName().equals(listName))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("List with name " + listName + " not found"));
+
+        Movie movie = movieRepository.findById(movieId).orElseThrow(
+                () -> new CompileTimeException("Movie with id " + movieId + " not found"));
+
+        MovieList movieList = list.getMovieList().stream()
+                .filter(ml -> ml.getMovie().getMovieId().equals(movie.getMovieId()))
+                .findFirst()
+                .orElseThrow(() -> new CompileTimeException("Movie with id " + movieId + " not found in list"));
+
+        list.getMovieList().remove(movieList);
+        return userRepository.save(user);
+    }
 
     public User addMovieToList(UUID uuid, UUID listId, UUID movieId) throws CompileTimeException {
         User user = userRepository.findById(uuid).orElseThrow(
@@ -226,6 +275,58 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public ListResponseDTO getList(UUID uuid, UUID listId) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        return user.getLists().stream()
+                .filter(l -> l.getListId().equals(listId))
+                .findFirst( ).map(
+                        list -> new ListResponseDTO(
+                                list.getListId(),
+                                list.getListName(),
+                                list.getMovieList().stream()
+                                        .map(MovieList::getMovie)
+                                        .toList()
+                        )
+                )
+                .orElseThrow(() -> new CompileTimeException("List with id " + listId + " not found"));
+    }
+
+    public List<ListResponseDTO> getAllLists(UUID uuid) throws CompileTimeException {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        return user.getLists().stream().map(lists ->
+                    new ListResponseDTO(
+                            lists.getListId(),
+                            lists.getListName(),
+                            lists.getMovieList().stream()
+                                    .map(MovieList::getMovie)
+                                    .toList()
+                    )
+                ).toList();
+    }
+
+    public List<String> findMovieInLists(UUID uuid, UUID movieId) throws  CompileTimeException
+    {
+        User user = userRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("User with uuid " + uuid + " not found"));
+
+        List<String> listNames = new ArrayList<>();
+
+
+        user.getLists().forEach(list -> {
+            list.getMovieList().forEach(movieList -> {
+                if (movieList.getMovie().getMovieId().equals(movieId)) {
+                    listNames.add(list.getListName());
+                }
+            });
+        });
+
+        return listNames;
+    }
+
     public void deleteUser(UUID uuid) {
         userRepository.deleteById(uuid);
     }
@@ -240,27 +341,5 @@ public class UserService {
                 () -> new CompileTimeException("User with id " + uuid + " not found"));
     }
 
-    public LoginResponse login(String username, String password) throws CompileTimeException {
-        String hashedPassword = BCryptHashing.hashPassword(password);
-
-        User user = userRepository.findByUsername(username).orElseThrow(
-                () -> new CompileTimeException("User with username " + username + " not found"));
-
-        if (BCryptHashing.checkPassword(password, user.getPassword())) {
-            return new LoginResponse(
-                    true,
-                    "Login successful",
-                    null
-            );
-        } else {
-            return new LoginResponse(
-                    false,
-                    "Invalid password",
-                    null
-            );
-        }
-
-
-    }
 
 }

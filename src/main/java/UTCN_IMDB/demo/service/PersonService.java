@@ -1,12 +1,10 @@
 package UTCN_IMDB.demo.service;
 
+import UTCN_IMDB.demo.DTO.MovieRoleDTO;
 import UTCN_IMDB.demo.DTO.PersonDTO;
 import UTCN_IMDB.demo.DTO.RoleDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
-import UTCN_IMDB.demo.model.Movie;
-import UTCN_IMDB.demo.model.MovieCast;
-import UTCN_IMDB.demo.model.Person;
-import UTCN_IMDB.demo.model.Role;
+import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.repository.MovieCastRepository;
 import UTCN_IMDB.demo.repository.MovieRepository;
 import UTCN_IMDB.demo.repository.PersonRepository;
@@ -120,6 +118,33 @@ public class PersonService {
 
         return movieCastRepository.save(movieCast);
 
+    }
+
+    public ActorDetails getActorDetails(UUID uuid) throws CompileTimeException {
+        Person person = personRepository.findById(uuid).orElseThrow(
+                () -> new CompileTimeException("Person with id " + uuid + " not found"));
+
+        ActorDetails actorDetails = new ActorDetails();
+        actorDetails.setFirstName(person.getFirstName());
+        actorDetails.setLastName(person.getLastName());
+        actorDetails.setGender(person.getGender());
+        actorDetails.setBirthDate(person.getBirthDate());
+        actorDetails.setNationality(person.getNationality());
+        actorDetails.setDeathDate(person.getDeathDate());
+
+        actorDetails.setMovieRoles(
+                person.getMovieCastList().stream()
+                        .map(movieCast -> {
+                            MovieRoleDTO movieRoleDTO = new MovieRoleDTO();
+                            movieRoleDTO.setMovieId(movieCast.getMovie().getMovieId());
+                            movieRoleDTO.setMovieName(movieCast.getMovie().getTitle());
+                            movieRoleDTO.setRoleName(movieCast.getRole().getRoleName());
+                            return movieRoleDTO;
+                        })
+                        .toList()
+        );
+
+        return actorDetails;
     }
 
 

@@ -145,47 +145,5 @@ class UserServiceTest{
         verify(userRepository, times(1)).deleteById(uuid);
     }
 
-    @Test
-    void testLoginSuccess() throws CompileTimeException {
-        String username = "john123";
-        String password = "password";
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword(BCryptHashing.hashPassword(password)); // Hash the password
-        user.setRole(UserRole.ADMIN); // Set a role
 
-        when(userRepository.findByUsername(username)).thenReturn(Optional.of(user)); // Changed to findByUsername
-        LoginResponse result = userService.login(username, password); // Assuming a login method
-
-        assertTrue(result.success());
-        verify(userRepository, times(1)).findByUsername(username); // Changed to findByUsername
-    }
-
-    @Test
-    void testLoginIncorrectPassword() throws CompileTimeException {
-        String username = "john123";
-        String password = "password";
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword("wrongpassword");
-        user.setRole(UserRole.NORMAL);
-
-        when(userRepository.findByUsername(username)).thenReturn(Optional.of(user)); // Changed to findByUsername
-        LoginResponse result = userService.login(username, password); // Assuming a login method
-
-        assertFalse(result.success());
-        assertEquals("Invalid password", result.errorMessage());
-        verify(userRepository, times(1)).findByUsername(username); // Changed to findByUsername
-    }
-
-    @Test
-    void testLoginUsernameNotFound() throws CompileTimeException {
-        String username = "john123";
-        String password = "password";
-
-        when(userRepository.findByUsername(username)).thenReturn(Optional.empty()); // Changed to findByUsername
-
-        assertThrows(CompileTimeException.class, () -> userService.login(username, password)); // Now passing userDTO
-        verify(userRepository, times(1)).findByUsername(username); // Changed to findByUsername
-    }
 }

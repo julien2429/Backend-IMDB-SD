@@ -1,5 +1,6 @@
 package UTCN_IMDB.demo.utils;
 
+import UTCN_IMDB.demo.enums.ReviewStatus;
 import UTCN_IMDB.demo.enums.UserRole;
 import UTCN_IMDB.demo.model.*;
 
@@ -16,6 +17,7 @@ public class MovieDetailsUtils {
 
         return reviews.stream()
                 .filter(review -> review.getUserRole() != UserRole.REVIEWER)
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .toList();
     }
 
@@ -29,6 +31,7 @@ public class MovieDetailsUtils {
 
         return reviews.stream()
                 .filter(review -> review.getUserRole() == UserRole.REVIEWER)
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .toList();
     }
 
@@ -38,6 +41,7 @@ public class MovieDetailsUtils {
         }
         return reviews.stream()
                 .filter(review -> review.getUserRole() != UserRole.REVIEWER)
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .mapToDouble(Review::getRating)
                 .average()
                 .orElse(0);
@@ -51,6 +55,7 @@ public class MovieDetailsUtils {
 
         return reviews.stream()
                 .filter(review -> review.getUserRole() == UserRole.REVIEWER)
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .mapToDouble(Review::getRating)
                 .average()
                 .orElse(0);
@@ -61,6 +66,7 @@ public class MovieDetailsUtils {
             return 0;
         }
         return reviews.stream()
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .mapToDouble(Review::getRating)
                 .average()
                 .orElse(0);
@@ -86,6 +92,7 @@ public class MovieDetailsUtils {
 
         List<Double> userRatings = reviews.stream()
                 .filter(review -> review.getUserRole() != UserRole.REVIEWER)
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .mapToDouble(Review::getRating)
                 .boxed()
                 .toList();
@@ -100,6 +107,7 @@ public class MovieDetailsUtils {
         }
         List<Double> criticRatings = reviews.stream()
                 .filter(review -> review.getUserRole() == UserRole.REVIEWER)
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .mapToDouble(Review::getRating)
                 .boxed()
                 .toList();
@@ -112,6 +120,7 @@ public class MovieDetailsUtils {
             return 0;
         }
         List<Double> allRatings = reviews.stream()
+                .filter(review -> review.getStatus() == ReviewStatus.APPROVED)
                 .mapToDouble(Review::getRating)
                 .boxed()
                 .toList();

@@ -1,7 +1,9 @@
 package UTCN_IMDB.demo.service;
 
 import UTCN_IMDB.demo.DTO.MovieDTO;
+import UTCN_IMDB.demo.DTO.MovieRoleDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
+import UTCN_IMDB.demo.enums.ReviewStatus;
 import UTCN_IMDB.demo.enums.UserRole;
 import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.repository.*;
@@ -31,6 +33,7 @@ public class MovieService {
     private final MovieGenreRepository movieGenreRepository;
     private final PersonRepository personRepository;
     private final RoleRepository roleRepository;
+    private final ReviewRepository reviewRepository;
     private final S3Service s3Service;
 
     @Transactional
@@ -167,6 +170,43 @@ public class MovieService {
         return movieRepository.save(movie);
     }
 
+    public List<MovieRoleDTO> getRolesByMovie(UUID movieUUID) throws CompileTimeException {
+        Movie movie = movieRepository.findById(movieUUID).orElseThrow(
+                () -> new CompileTimeException("Movie with uuid " + movieUUID + " not found"));
+
+        List<MovieRoleDTO> movieRoleDTOs = new ArrayList<>();
+        movie.getMovieCastList().forEach(movieCast -> {
+            MovieRoleDTO movieRoleDTO = new MovieRoleDTO();
+            movieRoleDTO.setMovieId(movie.getMovieId());
+            movieRoleDTO.setMovieName(movie.getTitle());
+            movieRoleDTO.setMovieCastId(movieCast.getCastId());
+            movieRoleDTO.setRoleName(movieCast.getRole().getRoleName());
+            movieRoleDTO.setActorName(movieCast.getPerson().getFirstName() + " " + movieCast.getPerson().getLastName());
+            movieRoleDTOs.add(movieRoleDTO);
+        });
+
+        return movieRoleDTOs;
+    }
+
+    public void removeRoleFromMovie(UUID movieCastUUID) throws CompileTimeException {
+        MovieCast movieCast = movieCastRepository.findById(movieCastUUID).orElseThrow(
+                () -> new CompileTimeException("Movie with uuid " + movieCastUUID + " not found"));
+
+
+        movieCastRepository.delete(movieCast);
+    }
+
+    public MovieCast editRoleInMovie(UUID movieCastUUID, String roleTitle) throws CompileTimeException {
+        MovieCast movieCast = movieCastRepository.findById(movieCastUUID).orElseThrow(
+                () -> new CompileTimeException("Movie with uuid " + movieCastUUID + " not found"));
+
+        Role role = movieCast.getRole();
+        role.setRoleName(roleTitle);
+
+        roleRepository.save(role);
+        return movieCastRepository.save(movieCast);
+    }
+
     @Transactional
     public String uploadImage(UUID movieUUID,  MultipartFile file) throws CompileTimeException, IOException {
 
@@ -260,6 +300,19 @@ public class MovieService {
         return filteredMovies;
     }
 
+
+    public Review changeReviewStatus(UUID reviewUUID, ReviewStatus reviewStatus) throws CompileTimeException {
+        Review review = reviewRepository.findById(reviewUUID).orElseThrow(
+                () -> new CompileTimeException("Movie with uuid " + reviewUUID + " not found"));
+
+        review.setStatus(reviewStatus);
+        return reviewRepository.save(review);
+    }
+
+    public List<Review> getReviewsByStatus(ReviewStatus reviewStatus) {
+
+        return reviewRepository.getReviewsByStatus(reviewStatus);
+    }
 
 
 }

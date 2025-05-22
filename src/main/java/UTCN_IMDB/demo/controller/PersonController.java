@@ -3,10 +3,7 @@ package UTCN_IMDB.demo.controller;
 import UTCN_IMDB.demo.DTO.PersonDTO;
 import UTCN_IMDB.demo.DTO.RoleDTO;
 import UTCN_IMDB.demo.config.CompileTimeException;
-import UTCN_IMDB.demo.model.Movie;
-import UTCN_IMDB.demo.model.MovieCast;
-import UTCN_IMDB.demo.model.Person;
-import UTCN_IMDB.demo.model.Role;
+import UTCN_IMDB.demo.model.*;
 import UTCN_IMDB.demo.service.PersonService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -30,6 +27,11 @@ public class PersonController {
     @GetMapping("/person/{uuid}")
     public Person getPersonById(@PathVariable UUID uuid) throws CompileTimeException{
         return personService.getPersonById(uuid);
+    }
+
+    @GetMapping("/person/details/{uuid}")
+    public ActorDetails getActorDetails(@PathVariable UUID uuid) throws CompileTimeException{
+        return personService.getActorDetails(uuid);
     }
 
     @GetMapping("/person/firstName/{firstName}")
