@@ -13,4 +13,6 @@ import java.util.UUID;
 public interface MovieGenreRepository extends JpaRepository<MovieGenre, UUID> {
 
     void deleteByMovie_MovieId(UUID movieId);
+
+    Optional<MovieGenre> findMovieGenreByMovie_MovieIdAndGenre_GenreId(UUID movieId, UUID genreId);
 }

@@ -314,5 +314,33 @@ public class MovieService {
         return reviewRepository.getReviewsByStatus(reviewStatus);
     }
 
+    public Movie removeGenreFromMovie(UUID movieUUID, UUID genreUUID) throws CompileTimeException {
+        Movie movie = movieRepository.findById(movieUUID).orElseThrow(
+                () -> new CompileTimeException("Movie with uuid " + movieUUID + " not found"));
+
+        Genre genre = genreRepository.findById(genreUUID).orElseThrow(
+                () -> new CompileTimeException("Genre with uuid " + genreUUID + " not found"));
+
+        MovieGenre movieGenre = movieGenreRepository.findMovieGenreByMovie_MovieIdAndGenre_GenreId(movie.getMovieId(), genre.getGenreId()).orElseThrow(
+                () -> new CompileTimeException("MovieGenre with uuid " + movieUUID + " not found"));
+
+        movie.getMovieGenres().remove(movieGenre);
+        movieGenreRepository.delete(movieGenre);
+
+        return movieRepository.save(movie);
+    }
+
+    public List<Genre> getGenresByMovie(UUID movieUUID) throws CompileTimeException {
+        Movie movie = movieRepository.findById(movieUUID).orElseThrow(
+                () -> new CompileTimeException("Movie with uuid " + movieUUID + " not found"));
+
+        List<Genre> genres = new ArrayList<>();
+        movie.getMovieGenres().forEach(movieGenre -> {
+            genres.add(movieGenre.getGenre());
+        });
+
+        return genres;
+    }
+
 
 }

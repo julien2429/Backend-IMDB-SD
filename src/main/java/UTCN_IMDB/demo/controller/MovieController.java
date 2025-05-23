@@ -142,5 +142,14 @@ public class MovieController {
     }
 
 
+    @PostMapping("/movie/removeGenreFromMovie/{movieUUID}/{genreUUID}")
+    public Movie removeGenreFromMovie(@PathVariable UUID movieUUID, @PathVariable UUID genreUUID) throws CompileTimeException {
+        return movieService.removeGenreFromMovie(movieUUID, genreUUID);
+    }
+
+    @GetMapping("/movie/getGenresByMovie/{movieUUID}")
+    public List<Genre> getGenresByMovie(@PathVariable UUID movieUUID) throws CompileTimeException {
+        return movieService.getGenresByMovie(movieUUID);
+    }
 
 }
